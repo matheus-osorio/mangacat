@@ -12,14 +12,20 @@ class Orchestrator:
     def __init__(self, threadMax = 5):
         self.threadMax = threadMax
 
-    def getManga(self,url):
+    def getChapter(self, url):
         MG = Manga_Getter(url)
-        chapters = MG.mangakalot()
-        last_chapter = chapters[-1]['href']
-        if not self.isNewEpisode(last_chapter):
-            return
+        return MG.mangakalot()
         
-        CG = Chapter_Getter(last_chapter)
+    def wipeDirectory(self,dir):
+        os.system(f'rm -r {dir}/*')
+
+    def moveFiles(self,origin,destiny):
+        os.system(f'mv {origin}/* {destiny}')
+
+    def getManga(self,url, name='result'):
+        self.wipeDirectory('./imgs')
+        self.wipeDirectory('./parts')
+        CG = Chapter_Getter(url)
         imgs = CG.mangakalot()
         calls = []
         for img in enumerate(imgs):
@@ -32,11 +38,8 @@ class Orchestrator:
         
         self.calls = calls
         self.makeCalls(self.callImages)
-        self.callImageGluer()
-        
-
-    def isNewEpisode(self,chapter):
-        return True
+        self.callImageGluer(name)
+        self.moveFiles('./parts', './chapters')
 
 
     def makeCalls(self, func):
@@ -56,24 +59,13 @@ class Orchestrator:
             self.calls = self.calls[1:]
             call()
 
-    def callImageGluer(self, params = {'jumpSize': 10}):
+    def callImageGluer(self, name):
+        imgFolderSize = len(os.listdir('./imgs/'))
+        imgList = []
+        for i in range(imgFolderSize):
+            imgList.append(str(i))
+        
+        imglu = Image_Gluer(imgList, f'./parts/{name}.png')
 
-        size = len(os.listdir('imgs'))
-        imglu = Image_Gluer(size,directory='./imgs/',  **params)
         imglu.glue()
-        parts = len(os.listdir('parts'))
-        os.system('rm ./imgs/*')
-        if parts > 1:
-            
-            for part in range(1,parts + 1):
-                os.system(f'mv ./parts/part{part}.png ./imgs/{part-1}.png')
-
-            self.callImageGluer({'jumpSize': 2, 'extension': 'png', 'useThreads': False})
-
-
         
-        
-
-
-orc = Orchestrator()
-orc.getManga(url)
